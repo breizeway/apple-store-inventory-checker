@@ -1,4 +1,6 @@
-const SKUS = {
+const CONTROL = 'MYD92LL/A';
+
+const SKUs = {
   'MKGR3LL/A': '14" Si, Base',
   'MKGP3LL/A': '14" SG, Base',
   'MKGT3LL/A': '14" Si, Better',
@@ -13,7 +15,7 @@ const SKUS = {
   'MK1A3LL/A': '16" SG, Best',
   'MK233LL/A': '16" SG, Ultimate',
   'MMQW3LL/A': '16" Si, Ultimate',
-  'MYD92LL/A': '13" Control',
+  [CONTROL]: '13" Control',
 };
 
 const COUNTRIES = {
@@ -23,6 +25,7 @@ const COUNTRIES = {
 };
 
 module.exports = {
-  SKUS: SKUS,
-  COUNTRIES: COUNTRIES,
+  CONTROL,
+  SKUs,
+  COUNTRIES,
 };

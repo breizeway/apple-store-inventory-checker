@@ -1,17 +1,20 @@
 const request = require("request");
 const notifier = require("node-notifier");
+const { SKUs, COUNTRIES, CONTROL } = require("./constants");
 
-const { SKUS, COUNTRIES } = require("./constants");
+
 const args = process.argv.slice(2);
-const favorites = ['MK1A3LL/A', 'MK1H3LL/A'];
-const control = 'MYD92LL/A';
+const favorites = ['MMQW3LL/A', 'MK233LL/A'];
 
-// const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-// console.log(timezone);
+//  to find timezone:
+//    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+//    console.log(timezone);
+
 const timeZone = 'America/Los_Angeles';
 
 let storeNumber = 'R077';
 let state = 'OR';
+let countryCode = '';
 
 if (args.length > 0) {
   const passedStore = args[0];
@@ -24,30 +27,12 @@ if (args.length > 0) {
   countryCode = COUNTRIES[passedCountry];
 }
 
-const SKUs = {
-  'MKGR3LL/A': '14" Si, Base',
-  'MKGP3LL/A': '14" SG, Base',
-  'MKGT3LL/A': '14" Si, Better',
-  'MKGQ3LL/A': '14" SG, Better',
-  'MMQX3LL/A': '14" Si, Ultimate',
-  'MKH53LL/A': '14" SG, Ultimate',
-  'MK1E3LL/A': '16" Si, Base',
-  'MK183LL/A': '16" SG, Base',
-  'MK1F3LL/A': '16" Si, Better',
-  'MK193LL/A': '16" SG, Better',
-  'MK1H3LL/A': '16" Si, Best',
-  'MK1A3LL/A': '16" SG, Best',
-  'MK1A3LL/A': '16" SG, Ultimate',
-  'MK1H3LL/A': '16" Si, Ultimate',
-  [control]: '13" Control',
-};
-
 const query =
   Object.keys(SKUs)
     .map((k, i) => `parts.${i}=${encodeURIComponent(k)}`)
     .join("&") + `&searchNearby=true&store=${storeNumber}`;
 
-let options = {
+const options = {
   method: "GET",
   url: `https://www.apple.com${countryCode}/shop/fulfillment-messages?` + query,
 };
@@ -57,7 +42,7 @@ request(options, (error, response) => {
 
   const body = JSON.parse(response.body);
   const storesArray = body.body.content.pickupMessage.stores;
-  let skuCounter = {};
+  const skuCounter = {};
   let hasStoreSearchError = false;
 
   const statusArray = storesArray
@@ -72,7 +57,7 @@ request(options, (error, response) => {
 
         hasStoreSearchError = product.storeSearchEnabled !== true;
 
-        if (key === control && hasStoreSearchError !== true) {
+        if (key === CONTROL && hasStoreSearchError !== true) {
           hasStoreSearchError = product.pickupDisplay !== "available";
         } else {
           productStatus.push(`${value}: ${product.pickupDisplay}`);
@@ -93,33 +78,31 @@ request(options, (error, response) => {
     })
     .filter((n) => n);
 
-  let hasError = hasStoreSearchError;
-
   const inventory = Object.entries(skuCounter)
     .map(([key, value]) => `${SKUs[key]}: ${value}`)
     .join(' | ');
 
   console.log(inventory);
 
-  let hasUltimate = Object.keys(skuCounter).some(
+  const hasFavorites = Object.keys(skuCounter).some(
     (r) => favorites.indexOf(r) >= 0
   );
   let notificationMessage;
 
   if (inventory) {
     notificationMessage = `${
-      hasUltimate ? "FOUND ULTIMATE! " : ""
+      hasFavorites ? "FOUND FAVORITE! " : ""
     }Some models found: ${inventory}`;
   } else {
     console.log(statusArray);
     notificationMessage = "No models found.";
   }
 
-  const message = hasError ? "Possible error?" : notificationMessage;
+  const message = hasStoreSearchError ? "Possible error?" : notificationMessage;
   notifier.notify({
     title: "MacBook Pro Availability",
     message: message,
-    sound: hasError || inventory,
+    sound: hasStoreSearchError || inventory,
     timeout: false,
   });
 
