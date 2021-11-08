@@ -1,6 +1,7 @@
-const request = require('request');
-const notifier = require('node-notifier');
+const request = require("request");
+const notifier = require("node-notifier");
 
+const { SKUS, COUNTRIES } = require("./constants");
 const args = process.argv.slice(2);
 const favorites = ['MK1A3LL/A', 'MK1H3LL/A'];
 const control = 'MYD92LL/A';
@@ -13,12 +14,14 @@ let storeNumber = 'R077';
 let state = 'OR';
 
 if (args.length > 0) {
-	const passedStore = args[0];
-	if (passedStore.charAt(0) === 'R') {
-		// All retail store numbers start with R
-		storeNumber = passedStore;
-		state = null;
-	}
+  const passedStore = args[0];
+  const passedCountry = args[1] ?? "US";
+  if (passedStore.charAt(0) === "R") {
+    // All retail store numbers start with R
+    storeNumber = passedStore;
+    state = null;
+  }
+  countryCode = COUNTRIES[passedCountry];
 }
 
 const SKUs = {
@@ -42,11 +45,11 @@ const SKUs = {
 const query =
   Object.keys(SKUs)
     .map((k, i) => `parts.${i}=${encodeURIComponent(k)}`)
-    .join('&') + `&searchNearby=true&store=${storeNumber}`;
+    .join("&") + `&searchNearby=true&store=${storeNumber}`;
 
-var options = {
-  method: 'GET',
-  url: 'https://www.apple.com/shop/fulfillment-messages?' + query,
+let options = {
+  method: "GET",
+  url: `https://www.apple.com${countryCode}/shop/fulfillment-messages?` + query,
 };
 
 request(options, (error, response) => {
@@ -70,11 +73,11 @@ request(options, (error, response) => {
         hasStoreSearchError = product.storeSearchEnabled !== true;
 
         if (key === control && hasStoreSearchError !== true) {
-          hasStoreSearchError = product.pickupDisplay !== 'available';
+          hasStoreSearchError = product.pickupDisplay !== "available";
         } else {
           productStatus.push(`${value}: ${product.pickupDisplay}`);
 
-          if (product.pickupDisplay !== 'unavailable') {
+          if (product.pickupDisplay !== "unavailable") {
             console.log(`${value} in stock at ${store.storeName}`);
             let count = skuCounter[key] ?? 0;
             count += 1;
@@ -98,24 +101,28 @@ request(options, (error, response) => {
 
   console.log(inventory);
 
-  let hasUltimate = Object.keys(skuCounter).some((r) => favorites.indexOf(r) >= 0);
+  let hasUltimate = Object.keys(skuCounter).some(
+    (r) => favorites.indexOf(r) >= 0
+  );
   let notificationMessage;
 
   if (inventory) {
-    notificationMessage = `${hasUltimate ? 'FOUND ULTIMATE! ' : ''}Some models found: ${inventory}`;
+    notificationMessage = `${
+      hasUltimate ? "FOUND ULTIMATE! " : ""
+    }Some models found: ${inventory}`;
   } else {
     console.log(statusArray);
-    notificationMessage = 'No models found.';
+    notificationMessage = "No models found.";
   }
 
-  const message = hasError ? 'Possible error?' : notificationMessage;
+  const message = hasError ? "Possible error?" : notificationMessage;
   notifier.notify({
-    title: 'MacBook Pro Availability',
+    title: "MacBook Pro Availability",
     message: message,
     sound: hasError || inventory,
     timeout: false,
   });
 
   // Log time at end
-  console.log(new Date().toLocaleString('en-US', { timeZone }));
+  console.log(new Date().toLocaleString("en-US", { timeZone }));
 });
