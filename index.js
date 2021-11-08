@@ -2,11 +2,15 @@ const request = require('request');
 const notifier = require('node-notifier');
 
 const args = process.argv.slice(2);
-const favorites = ['MMQX3LL/A', 'MKH53LL/A', 'MK1A3LL/A', 'MK1H3LL/A'];
+const favorites = ['MK1A3LL/A', 'MK1H3LL/A'];
 const control = 'MYD92LL/A';
-const timeZone = 'America/Denver';
-let storeNumber = 'R172';
-let state = 'CO';
+
+// const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+// console.log(timezone);
+const timeZone = 'America/Los_Angeles';
+
+let storeNumber = 'R077';
+let state = 'OR';
 
 if (args.length > 0) {
 	const passedStore = args[0];
@@ -17,7 +21,7 @@ if (args.length > 0) {
 	}
 }
 
-const skus = {
+const SKUs = {
   'MKGR3LL/A': '14" Si, Base',
   'MKGP3LL/A': '14" SG, Base',
   'MKGT3LL/A': '14" Si, Better',
@@ -32,11 +36,11 @@ const skus = {
   'MK1A3LL/A': '16" SG, Best',
   'MK1A3LL/A': '16" SG, Ultimate',
   'MK1H3LL/A': '16" Si, Ultimate',
-  'MYD92LL/A': '13" Control',
+  [control]: '13" Control',
 };
 
 const query =
-  Object.keys(skus)
+  Object.keys(SKUs)
     .map((k, i) => `parts.${i}=${encodeURIComponent(k)}`)
     .join('&') + `&searchNearby=true&store=${storeNumber}`;
 
@@ -45,7 +49,7 @@ var options = {
   url: 'https://www.apple.com/shop/fulfillment-messages?' + query,
 };
 
-request(options, function (error, response) {
+request(options, (error, response) => {
   if (error) throw new Error(error);
 
   const body = JSON.parse(response.body);
@@ -60,7 +64,7 @@ request(options, function (error, response) {
       const name = store.storeName;
       let productStatus = [];
 
-      for (const [key, value] of Object.entries(skus)) {
+      for (const [key, value] of Object.entries(SKUs)) {
         const product = store.partsAvailability[key];
 
         hasStoreSearchError = product.storeSearchEnabled !== true;
@@ -89,7 +93,7 @@ request(options, function (error, response) {
   let hasError = hasStoreSearchError;
 
   const inventory = Object.entries(skuCounter)
-    .map(([key, value]) => `${skus[key]}: ${value}`)
+    .map(([key, value]) => `${SKUs[key]}: ${value}`)
     .join(' | ');
 
   console.log(inventory);
